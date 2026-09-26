@@ -14,7 +14,20 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request)),
+    caches.match(e.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(e.request)
+        .then((response) => {
+          // кэшируем успешные ответы того же origin (включая хешированные бандлы)
+          if (response && response.status === 200 && response.type === 'basic') {
+            const clone = response.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, clone));
+          }
+          return response;
+        })
+        .catch(() => cached);
+    }),
   );
 });

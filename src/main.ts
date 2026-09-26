@@ -45,6 +45,7 @@ let lastDrop = performance.now();
 let overlayShown = false;
 let animating = false;
 let feedbackActive = false;
+let gameoverRendered = false;
 
 function syncHud(): void {
   scoreEl.textContent = String(game.score);
@@ -90,7 +91,6 @@ function loop(now: number): void {
       const rows = game.pendingClears();
       animateLineClear(ctx, rows, CELL, () => {
         game.resolve();
-        syncHud();
         lastDrop = performance.now();
         animating = false;
       });
@@ -102,10 +102,11 @@ function loop(now: number): void {
     ctx.font = `${CELL}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+    gameoverRendered = true;
   }
 
   syncHud();
-  requestAnimationFrame(loop);
+  if (!gameoverRendered) requestAnimationFrame(loop);
 }
 
 requestAnimationFrame(loop);

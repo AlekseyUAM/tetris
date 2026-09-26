@@ -11,13 +11,10 @@ const SWIPE_THRESHOLD = 24; // px
 export function attachTouchInput(el: HTMLElement, h: InputHandlers): () => void {
   let startX = 0;
   let startY = 0;
-  let moved = false;
-
   const onStart = (e: TouchEvent) => {
     const t = e.changedTouches[0];
     startX = t.clientX;
     startY = t.clientY;
-    moved = false;
   };
 
   const onEnd = (e: TouchEvent) => {
@@ -36,7 +33,6 @@ export function attachTouchInput(el: HTMLElement, h: InputHandlers): () => void 
     } else {
       dy > 0 ? h.onSoftDrop() : h.onHardDrop();
     }
-    moved = true;
   };
 
   const prevent = (e: TouchEvent) => {
@@ -51,6 +47,5 @@ export function attachTouchInput(el: HTMLElement, h: InputHandlers): () => void 
     el.removeEventListener('touchstart', onStart);
     el.removeEventListener('touchend', onEnd);
     el.removeEventListener('touchmove', prevent);
-    void moved;
   };
 }
