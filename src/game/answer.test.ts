@@ -69,4 +69,41 @@ describe('Game — answering questions', () => {
     g.answer(-1);
     expect(g.score).toBe(0);
   });
+
+  it('asks one question per completed line; correct clears, wrong stays', () => {
+    const g = new Game({ rng: () => 0 });
+    // заполнить строки 18 и 19 кроме столбца 0
+    for (let col = 1; col < BOARD_WIDTH; col++) {
+      g.board.grid[18][col] = 'I';
+      g.board.grid[19][col] = 'I';
+    }
+    // вертикальная I в столбце 0 закрывает обе строки
+    g.current = { type: 'I', rotation: 1, row: 16, col: -2 };
+    g.hardDrop();
+    expect(g.phase).toBe('question');
+    expect(g.questionQueue.length).toBe(2);
+
+    // первый вопрос — строка 18 — отвечаем верно
+    expect(g.activeQuestion!.row).toBe(18);
+    const q1 = g.activeQuestion!.question;
+    const r1 = g.answer(q1.options.indexOf(q1.correct));
+    expect(r1.correct).toBe(true);
+    expect(r1.done).toBe(false);
+
+    // перешли ко второму вопросу — строка 19 — отвечаем неверно (таймаут)
+    expect(g.phase).toBe('question');
+    expect(g.activeQuestion!.row).toBe(19);
+    const r2 = g.answer(-1);
+    expect(r2.correct).toBe(false);
+    expect(r2.done).toBe(true);
+
+    expect(g.phase).toBe('resolving');
+    expect(g.pendingClears()).toEqual([18]);
+    expect(g.score).toBe(50); // +100 верный (уровень 1) − 50 штраф
+
+    g.resolve();
+    expect(g.linesCleared).toBe(1);
+    // строка 18 очищена; строка 19 (неверный ответ) осталась заполненной
+    expect(g.board.getFullLines()).toEqual([19]);
+  });
 });
