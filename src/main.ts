@@ -44,6 +44,7 @@ window.addEventListener('keydown', (e) => {
 let lastDrop = performance.now();
 let overlayShown = false;
 let animating = false;
+let feedbackActive = false;
 
 function syncHud(): void {
   scoreEl.textContent = String(game.score);
@@ -70,18 +71,21 @@ function loop(now: number): void {
       const submit = (index: number) => {
         const res = game.answer(index);
         overlay.showFeedback(res.correct, res.correctAnswer);
+        feedbackActive = true;
         window.setTimeout(() => {
           overlay.hide();
           overlayShown = false;
+          feedbackActive = false;
         }, 1500);
       };
       overlay.show(q, { onAnswer: submit, onTimeout: () => submit(-1) });
     }
   } else if (game.phase === 'resolving') {
     drawBoard(ctx, game.board, null, CELL);
-    // запускаем анимацию сгорания один раз; флаг animating не даёт войти сюда
-    // повторно на каждом кадре, пока анимация играет
-    if (!animating) {
+    // Ждём, пока скроется оверлей обратной связи (feedbackActive), иначе анимация
+    // сгорания идёт под непрозрачным оверлеем и не видна, а игра возобновляется
+    // под перекрытием.
+    if (!animating && !feedbackActive) {
       animating = true;
       const rows = game.pendingClears();
       animateLineClear(ctx, rows, CELL, () => {
@@ -92,7 +96,6 @@ function loop(now: number): void {
       });
     }
   } else if (game.phase === 'gameover') {
-    syncHud();
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#fff';
