@@ -31,6 +31,7 @@ export class QuestionOverlay {
   }
 
   show(q: Question, cb: OverlayCallbacks): void {
+    this.stopTimer();
     this.cb = cb;
     this.promptEl.textContent = q.prompt;
     this.optionsEl.innerHTML = '';
@@ -38,7 +39,10 @@ export class QuestionOverlay {
       const b = document.createElement('button');
       b.className = 'opt';
       b.textContent = opt;
-      b.onclick = () => cb.onAnswer(i);
+      b.onclick = () => {
+        this.stopTimer();
+        cb.onAnswer(i);
+      };
       this.optionsEl.appendChild(b);
     });
     this.el.classList.add('visible');
