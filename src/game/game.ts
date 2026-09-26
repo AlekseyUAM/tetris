@@ -5,12 +5,19 @@ import { isValidPosition } from '../engine/collision';
 import { PieceType } from '../engine/types';
 import { generateQuestion, Question } from '../vocab/question';
 import { DICTIONARY } from '../vocab/dictionary';
+import { lineScore, WRONG_ANSWER_PENALTY, levelForLines } from '../engine/scoring';
 
 export type Phase = 'playing' | 'question' | 'resolving' | 'gameover';
 
 export interface PendingQuestion {
   row: number;
   question: Question;
+}
+
+export interface AnswerResult {
+  correct: boolean;
+  correctAnswer: string;
+  done: boolean;
 }
 
 export interface GameOptions {
@@ -104,5 +111,46 @@ export class Game {
     this.phase = isValidPosition(this.board.grid, getCells(this.current)) ? 'playing' : 'gameover';
   }
 
-  // answer() и resolve() добавляются в Task 9.
+  pendingClears(): number[] {
+    return [...this.correctRows];
+  }
+
+  answer(optionIndex: number): AnswerResult {
+    if (this.phase !== 'question' || !this.activeQuestion) {
+      return { correct: false, correctAnswer: '', done: true };
+    }
+    const q = this.activeQuestion.question;
+    const chosen = optionIndex >= 0 && optionIndex < q.options.length ? q.options[optionIndex] : undefined;
+    const correct = chosen === q.correct;
+
+    if (correct) {
+      this.correctRows.push(this.activeQuestion.row);
+      this.score += lineScore(this.level);
+    } else {
+      this.score = Math.max(0, this.score - WRONG_ANSWER_PENALTY);
+    }
+
+    this.queueIndex += 1;
+    let done = false;
+    if (this.queueIndex < this.questionQueue.length) {
+      this.activeQuestion = this.questionQueue[this.queueIndex];
+    } else {
+      this.activeQuestion = null;
+      this.phase = 'resolving';
+      done = true;
+    }
+    return { correct, correctAnswer: q.correct, done };
+  }
+
+  resolve(): void {
+    if (this.phase !== 'resolving') return;
+    this.board.clearLines(this.correctRows);
+    this.linesCleared += this.correctRows.length;
+    this.level = levelForLines(this.linesCleared);
+    this.correctRows = [];
+    this.questionQueue = [];
+    this.queueIndex = 0;
+    this.activeQuestion = null;
+    this.spawnNext();
+  }
 }
