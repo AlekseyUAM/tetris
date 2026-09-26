@@ -69,6 +69,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
+    "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noEmit": true,
@@ -900,11 +901,15 @@ describe('Game — playing phase', () => {
 
   it('locks the piece and spawns a new one when it cannot fall further', () => {
     const g = new Game({ rng: () => 0 });
-    for (let i = 0; i < 25; i++) {
-      if (g.phase !== 'playing') break;
+    // шагаем, пока первая фигура не зафиксируется (поле перестанет быть пустым)
+    let guard = 0;
+    while (g.board.grid.flat().every((c) => c === null) && g.phase === 'playing' && guard < 100) {
       g.step();
+      guard++;
     }
-    // после фиксации на дне должна появиться новая фигура у верха
+    // фиксация произошла; spawnNext создал новую фигуру у верха
+    expect(g.phase).toBe('playing');
+    expect(g.board.grid.flat().some((c) => c !== null)).toBe(true);
     expect(g.current.row).toBe(0);
   });
 
@@ -1039,8 +1044,12 @@ export class Game {
   }
 
   private lock(): void {
+    // строки, уже заполненные ДО фиксации (напр. линия, оставшаяся после
+    // неверного ответа), не должны повторно вызывать вопрос — берём только
+    // линии, завершённые ИМЕННО этой фигурой.
+    const before = new Set(this.board.getFullLines());
     this.board.lockPiece(getCells(this.current), this.current.type);
-    const full = this.board.getFullLines();
+    const full = this.board.getFullLines().filter((row) => !before.has(row));
     if (full.length > 0) {
       this.correctRows = [];
       this.queueIndex = 0;
