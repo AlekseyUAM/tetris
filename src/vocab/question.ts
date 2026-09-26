@@ -21,9 +21,9 @@ export function generateQuestion(dict: WordPair[], rng: () => number = Math.rand
   const correct = direction === 'en-ru' ? word.ru : word.en;
   const answerOf = (w: WordPair) => (direction === 'en-ru' ? w.ru : w.en);
 
-  const distractorPool = dict
-    .filter((w) => answerOf(w) !== correct)
-    .map(answerOf);
+  const distractorPool = [...new Set(
+    dict.filter((w) => answerOf(w) !== correct).map(answerOf),
+  )];
 
   const distractors: string[] = [];
   while (distractors.length < 3 && distractorPool.length > 0) {

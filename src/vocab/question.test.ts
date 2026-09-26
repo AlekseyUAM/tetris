@@ -28,6 +28,23 @@ describe('generateQuestion', () => {
     }
   });
 
+  it('returns exactly 4 unique options even when dict has duplicate translations', () => {
+    // Two entries share the same Russian translation ('вода') — synonym duplicates.
+    // The correct answer for 'sun' is 'солнце' (not the duplicated value).
+    const dictWithDupes: WordPair[] = [
+      { en: 'sun', ru: 'солнце' },
+      { en: 'water', ru: 'вода' },
+      { en: 'flood', ru: 'вода' }, // duplicate ru translation
+      { en: 'cat', ru: 'кот' },
+      { en: 'dog', ru: 'собака' },
+    ];
+    // rng() = 0 → direction en-ru, word index 0 → 'sun' / 'солнце'
+    const q = generateQuestion(dictWithDupes, () => 0);
+    expect(q.options).toHaveLength(4);
+    expect(new Set(q.options).size).toBe(4);
+    expect(q.options).toContain(q.correct);
+  });
+
   it('ru-en direction prompts with Russian, correct is English', () => {
     // подобранный rng, дающий direction ru-en; см. реализацию для порядка вызовов rng
     const seq = [0.99, 0, 0, 0, 0, 0, 0, 0, 0, 0];
